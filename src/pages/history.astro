@@ -1,0 +1,127 @@
+---
+import Layout from "~/layouts/Layout.astro";
+---
+
+<Layout title="Riwayat Tontonan - Vollereinime">
+  <div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-primary">Riwayat Tontonan</h1>
+        <button id="clearHistoryBtn" class="btn btn-error btn-sm text-white hidden">
+            Hapus Riwayat
+        </button>
+    </div>
+
+    <div id="historyContent" class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 min-h-[50vh]">
+        </div>
+
+    <div id="emptyState" class="hidden flex-col items-center justify-center text-center py-20 opacity-70">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-history mb-4"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/><path d="M12 7v5l4 2"/></svg>
+        <p class="text-xl font-semibold">Belum ada riwayat tontonan.</p>
+        <a href="/" class="btn btn-primary btn-sm mt-4">Mulai Nonton</a>
+    </div>
+  </div>
+
+  <template id="history-card-template">
+    <div class="card aspect-[3/4] group relative select-none shadow rounded max-h-96 bg-base-200">
+      <figure class="w-full h-full">
+        <img
+          src=""
+          alt=""
+          loading="lazy"
+          class="card-image object-cover aspect-[3/4] rounded w-full h-full"
+        />
+      </figure>
+      <div class="w-full absolute bottom-0 bg-base-100/80 backdrop-blur-sm group-hover:bg-base-100/95 transition-all h-auto p-2 flex flex-col justify-center items-center rounded-b">
+        <h3 class="text-sm md:text-base font-bold text-center line-clamp-1 w-full mb-1 title-el"></h3>
+        
+        <div class="flex flex-col gap-2 w-full items-center">
+            <span class="text-xs opacity-80 episode-el"></span>
+            <span class="text-[10px] opacity-60 date-el"></span>
+            <a href="" class="btn btn-primary btn-xs w-full link-el">Lanjut</a>
+        </div>
+      </div>
+      <button class="delete-item-btn btn btn-circle btn-xs btn-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10" title="Hapus dari riwayat">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+  </template>
+
+  <script>
+    function loadHistory() {
+        const HISTORY_KEY = "anime_history";
+        const container = document.getElementById("historyContent");
+        const emptyState = document.getElementById("emptyState");
+        const clearBtn = document.getElementById("clearHistoryBtn");
+        const template = document.getElementById("history-card-template");
+
+        if (!container || !template) return;
+        const historyData = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+        container.innerHTML = ""; 
+
+        if (historyData.length === 0) {
+            emptyState.classList.remove("hidden");
+            emptyState.classList.add("flex");
+            if(clearBtn) clearBtn.classList.add("hidden");
+            return;
+        }
+
+        if(clearBtn) clearBtn.classList.remove("hidden");
+        emptyState.classList.add("hidden");
+        emptyState.classList.remove("flex");
+
+        historyData.forEach((item, index) => {
+            const clone = template.content.cloneNode(true);
+            const card = clone.querySelector(".card");
+            
+            const img = clone.querySelector("img");
+            img.src = item.image || 'https://via.placeholder.com/240x340';
+            img.alt = item.title;
+
+            clone.querySelector(".title-el").textContent = item.title;
+            clone.querySelector(".episode-el").textContent = item.episode;
+            
+            const dateEl = clone.querySelector(".date-el");
+            if (item.timestamp) {
+                dateEl.textContent = new Date(item.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit' });
+            }
+
+            const link = clone.querySelector(".link-el");
+            link.href = item.link;
+
+            const deleteBtn = clone.querySelector(".delete-item-btn");
+            deleteBtn.onclick = (e) => {
+                e.preventDefault(); 
+                removeFromHistory(item.id);
+            };
+
+            container.appendChild(clone);
+        });
+    }
+
+    function removeFromHistory(idToRemove) {
+        const HISTORY_KEY = "anime_history";
+        let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+        history = history.filter(item => item.id !== idToRemove);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+        loadHistory(); 
+    }
+
+    function clearAllHistory() {
+        if(confirm("Apakah Anda yakin ingin menghapus semua riwayat tontonan?")) {
+            localStorage.removeItem("anime_history");
+            loadHistory();
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadHistory);
+    document.addEventListener("astro:after-swap", loadHistory);
+    const clearBtn = document.getElementById("clearHistoryBtn");
+    if (clearBtn) {
+        clearBtn.addEventListener("click", clearAllHistory);
+    }
+
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+        loadHistory();
+    }
+  </script>
+</Layout>
