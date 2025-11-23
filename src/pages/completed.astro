@@ -3,25 +3,29 @@ export const prerender = false;
 import Layout from "~/layouts/Layout.astro";
 import Card from "~/components/ui/Card.astro";
 import { fetchData } from "~/utils/api";
-const data = await fetchData("completed");
+const data = await fetchData("finished");
 ---
 
-<Layout title="Completed - Vollereinime">
+<Layout title="Completed Anime - Vollereinime">
+  <h1 class="text-2xl font-bold mb-4 px-2 mt-4 border-l-4 border-primary pl-3">Anime Tamat (Completed)</h1>
+  
   <div id="content" class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
-    <Card data={data?.results || data?.animes || []} />
+    {/* Format data baru menggunakan key 'animes' */}
+    <Card data={data?.animes || data?.results || []} />
+    
     <div
       id="loading"
-      class="skeleton aspect-[3/4] max-h-96 flex items-center justify-center"
+      class="skeleton aspect-[3/4] max-h-96 flex items-center justify-center rounded bg-base-200"
     >
-      Loading...
+      <span class="loading loading-spinner loading-lg text-primary"></span>
     </div>
   </div>
 
   <template id="card-template">
     <div
-      class="card aspect-[3/4] group relative select-none shadow rounded max-h-96"
+      class="card aspect-[3/4] group relative select-none shadow rounded max-h-96 overflow-hidden"
     >
-      <figure>
+      <figure class="w-full h-full">
         <img
           src=""
           width="240"
@@ -32,31 +36,31 @@ const data = await fetchData("completed");
         />
       </figure>
       <div
-        class="w-full absolute bottom-0 bg-base-100/50 group-hover:backdrop-blur-sm transition-[height] max-h-[100%] h-20 md:h-22 group-hover:h-96 flex flex-col justify-center items-center rounded"
+        class="w-full absolute bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent group-hover:backdrop-blur-sm transition-[height] max-h-[100%] h-24 md:h-28 group-hover:h-full flex flex-col justify-end items-center rounded p-2"
       >
         <h3
-          class="text-sm md:text-md font-bold absolute top-2 line-clamp-2 group-hover:line-clamp-5 text-center"
+          class="text-sm md:text-base font-bold absolute top-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 line-clamp-3 text-center w-full px-2 text-white"
         >
         </h3>
-        <div class="absolute bottom-1 flex flex-col gap-4">
-          <a href="" class="hidden group-hover:flex btn btn-primary btn-sm">
+   
+        <h3 class="text-xs md:text-sm font-semibold line-clamp-2 text-center text-white mb-2 group-hover:opacity-0 transition-opacity">
+        </h3>
+
+        <div class="flex flex-col gap-2 items-center w-full pb-2">
+          <a href="" class="hidden group-hover:flex btn btn-primary btn-sm w-3/4 shadow-lg border-none">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
               height="16"
               viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="lucide lucide-play size-4"
+              fill="currentColor"
+              class="size-4"
             >
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
             Tonton
           </a>
-          <p class="text-center text-xs font-semibold"></p>
+          <p class="text-center text-[10px] font-bold text-gray-300 tracking-wide uppercase"></p>
         </div>
       </div>
     </div>
@@ -68,7 +72,7 @@ const data = await fetchData("completed");
       if (window.__infiniteScrollObserver) {
         window.__infiniteScrollObserver.disconnect();
       }
-      initInfiniteScroll("completed");
+      initInfiniteScroll("finished");
     }
 
     if (document.readyState === "loading") {
@@ -77,7 +81,6 @@ const data = await fetchData("completed");
       setupInfiniteScroll();
     }
 
-    window.addEventListener("pageshow", setupInfiniteScroll);
     document.addEventListener("astro:after-swap", setupInfiniteScroll);
   </script>
 </Layout>
