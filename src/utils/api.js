@@ -34,12 +34,13 @@ export async function fetchSearchData(query) {
 export async function fetchScheduleData(day = 'all', page = 1) {
   try {
     const params = new URLSearchParams();
-    if (day) params.append("scheduled_day", day);
+    if (day) params.append("scheduled_day", day.toLowerCase()); 
     if (page) params.append("page", page.toString());
     const url = `${API_BASE_URL}/schedule?${params.toString()}`;
     const response = await fetch(url);
     if (!response.ok) {
-        throw new Error(`API schedule failed with status: ${response.status}`);
+        console.error(`API schedule failed: ${response.status}`);
+        return { results: [], pagination: {} };
     }
     return await response.json(); 
   } catch (error) {
