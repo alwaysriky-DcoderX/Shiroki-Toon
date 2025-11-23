@@ -2,119 +2,135 @@
 import Layout from '~/layouts/Layout.astro';
 import { fetchScheduleData } from '~/utils/api.js';
 
-const daysMap = {
-  monday: "Senin",
-  tuesday: "Selasa",
-  wednesday: "Rabu",
-  thursday: "Kamis",
-  friday: "Jumat",
-  saturday: "Sabtu",
-  sunday: "Minggu",
-  random: "Random"
-};
+const currentDay = Astro.url.searchParams.get('day') || 'all';
+const currentPage = Number(Astro.url.searchParams.get('page')) || 1;
 
-let groupedSchedule = {};
-let sortedDays = [];
-let hasData = false;
+const daysMap = [
+  { id: 'all', label: 'Semua' },
+  { id: 'monday', label: 'Senin' },
+  { id: 'tuesday', label: 'Selasa' },
+  { id: 'wednesday', label: 'Rabu' },
+  { id: 'thursday', label: 'Kamis' },
+  { id: 'friday', label: 'Jumat' },
+  { id: 'saturday', label: 'Sabtu' },
+  { id: 'sunday', label: 'Minggu' },
+  { id: 'random', label: 'Random' },
+];
+
+let animeList = [];
+let pagination = {};
+let errorMsg = null;
 
 try {
-  const promises = Object.keys(daysMap).map(async (apiDay) => {
-    const res = await fetchScheduleData(apiDay);
-    const animeList = res?.results || res?.data || [];
-    
-    return {
-      dayName: daysMap[apiDay], 
-      list: Array.isArray(animeList) ? animeList : []
-    };
-  });
-
-  const dailyResults = await Promise.all(promises);
-
-  dailyResults.forEach(({ dayName, list }) => {
-    if (list.length > 0) {
-      groupedSchedule[dayName] = list.map(anime => ({
-        anime_name: anime.title,
-        displayImage: anime.poster || anime.image || 'https://via.placeholder.com/250x350?text=No+Image',
-        watchPageId: anime.id,
-        watchPageSlug: anime.slug,
-        displayInfo: anime.score, // Isinya "Selanjutnya: Ep 8"
-        scheduleTime: anime.schedule?.time || '' // Isinya "00:20 WIB"
-      }));
-      hasData = true;
-    }
-  });
-
-  const daysOrder = Object.values(daysMap);
-  sortedDays = Object.keys(groupedSchedule).sort((a, b) => {
-    return daysOrder.indexOf(a) - daysOrder.indexOf(b);
-  });
-
+  const res = await fetchScheduleData(currentDay, currentPage);
+  animeList = res?.results || [];
+  pagination = res?.pagination || {};
 } catch (error) {
-  console.error("Gagal mengambil jadwal anime:", error);
+  console.error("Gagal mengambil data:", error);
+  errorMsg = "Terjadi kesalahan saat mengambil data jadwal.";
+}
+
+function getPageLink(page) {
+  const params = new URLSearchParams();
+  params.set('day', currentDay);
+  params.set('page', page);
+  return `?${params.toString()}`;
 }
 ---
 
-<Layout title="Jadwal Anime" description="Jadwal rilis anime terbaru">
+<Layout title="Jadwal Anime" description="Jadwal rilis anime terbaru dan terlengkap">
   <div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-8 text-center">Jadwal Anime</h1>
+    <h1 class="text-3xl font-bold mb-6 text-center">Jadwal Anime</h1>
 
-    {hasData ? (
-      sortedDays.map(day => (
-        <div class="mb-10">
-          <div class="flex items-center gap-4 mb-6">
-             <h2 class="text-2xl font-bold text-primary uppercase tracking-wide">{day}</h2>
-             <div class="h-px bg-base-content/10 flex-grow"></div>
-          </div>
-          
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-            {groupedSchedule[day].map(anime => (
-              <div class="card bg-base-200 shadow-lg hover:shadow-xl transition-shadow duration-300 group overflow-hidden relative rounded-lg">
-                <figure class="relative w-full pb-[140%] overflow-hidden">
-                    <img
-                        src={anime.displayImage}
-                        alt={anime.anime_name || 'Anime Image'}
-                        class="absolute inset-0 w-full h-full object-cover transform transition-transform duration-500 group-hover:scale-110"
-                        loading="lazy"
-                    />
-                    {anime.scheduleTime && (
-                        <div class="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded">
-                            {anime.scheduleTime}
-                        </div>
-                    )}
-                </figure>
+    <div class="flex flex-wrap justify-center gap-2 mb-8">
+      {daysMap.map((day) => (
+        <a
+          href={`?day=${day.id}&page=1`}
+          class={`btn btn-sm ${currentDay === day.id ? 'btn-primary' : 'btn-outline border-base-content/20 text-base-content hover:bg-base-content hover:text-base-100'}`}
+        >
+          {day.label}
+        </a>
+      ))}
+    </div>
+
+    {errorMsg ? (
+        <div class="alert alert-error shadow-lg max-w-md mx-auto">
+            <span>{errorMsg}</span>
+        </div>
+    ) : animeList.length > 0 ? (
+      <>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 mb-8">
+          {animeList.map((anime) => (
+            <div class="card bg-base-200 shadow-lg hover:shadow-xl transition-shadow duration-300 group overflow-hidden relative rounded-lg">
+              <figure class="relative w-full pb-[140%] overflow-hidden">
+                <img
+                  src={anime.poster || anime.image || 'https://via.placeholder.com/250x350?text=No+Image'}
+                  alt={anime.title}
+                  class="absolute inset-0 w-full h-full object-cover transform transition-transform duration-500 group-hover:scale-110"
+                  loading="lazy"
+                />
                 
-                <div class="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent flex flex-col justify-end p-3 text-white">
-                    <h3 class="font-bold text-sm sm:text-base leading-snug mb-1 line-clamp-2 group-hover:text-primary transition-colors">
-                        {anime.anime_name}
-                    </h3>
-                  
-                    {anime.displayInfo && (
-                        <div class="text-xs text-gray-300 mb-3 line-clamp-1">
-                            {anime.displayInfo}
-                        </div>
-                    )}
+                {anime.schedule?.time && anime.schedule.time !== '?' && (
+                  <div class="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded shadow-sm border border-white/10">
+                    {anime.schedule.time}
+                  </div>
+                )}
+                
+                {anime.quality && (
+                   <div class="absolute top-2 right-2 bg-primary/80 backdrop-blur-sm text-primary-content text-[10px] font-bold px-1.5 py-0.5 rounded">
+                    {anime.quality}
+                  </div>
+                )}
+              </figure>
 
-                    <div class="card-actions mt-auto">
-                        {anime.watchPageId && anime.watchPageSlug ? (
-                            <a href={`/watch/${anime.watchPageId}/${anime.watchPageSlug}`} class="btn btn-primary btn-sm w-full border-none bg-primary/90 hover:bg-primary">
-                                Tonton
-                            </a>
-                        ) : (
-                            <button class="btn btn-disabled btn-sm w-full bg-white/10 text-white/50">Belum Tersedia</button>
-                        )}
-                    </div>
+              <div class="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent flex flex-col justify-end p-3 text-white">
+                <h3 class="font-bold text-sm sm:text-base leading-snug mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+                  {anime.title}
+                </h3>
+
+                <div class="text-xs text-gray-300 mb-3 line-clamp-1 opacity-90">
+                  {anime.score || 'Belum ada info'}
+                </div>
+
+                <div class="card-actions mt-auto">
+                  <a 
+                    href={`/watch/${anime.id}/${anime.slug}`} 
+                    class="btn btn-primary btn-xs w-full border-none bg-primary/90 hover:bg-primary shadow-md"
+                  >
+                    Tonton
+                  </a>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-      ))
+        <div class="flex justify-center gap-2 mt-8">
+          <a 
+            href={pagination.hasPrev ? getPageLink(currentPage - 1) : '#'} 
+            class={`btn btn-sm ${!pagination.hasPrev ? 'btn-disabled opacity-50' : 'btn-outline'}`}
+          >
+            « Prev
+          </a>
+          
+          <button class="btn btn-sm btn-active no-animation cursor-default">
+            Halaman {currentPage}
+          </button>
+          
+          <a 
+            href={pagination.hasNext ? getPageLink(currentPage + 1) : '#'} 
+            class={`btn btn-sm ${!pagination.hasNext ? 'btn-disabled opacity-50' : 'btn-outline'}`}
+          >
+            Next »
+          </a>
+        </div>
+      </>
     ) : (
-      <div class="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
-        <div class="loading loading-spinner loading-lg text-primary"></div>
-        <p class="text-center text-lg opacity-70">
-            Sedang memuat jadwal anime...
-        </p>
+      <div class="flex flex-col items-center justify-center min-h-[40vh] opacity-70">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 text-base-content/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p class="text-lg font-semibold">Tidak ada jadwal anime ditemukan.</p>
+        <p class="text-sm">Coba pilih hari lain.</p>
       </div>
     )}
   </div>
