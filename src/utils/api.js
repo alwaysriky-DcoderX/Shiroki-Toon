@@ -12,9 +12,7 @@ export async function fetchSearchData(query) {
       console.warn("Search query is empty.");
       return { results: [] };
     }
-    // Perubahan: Menggunakan path parameter /search/:keyword
     const url = `${API_BASE_URL}/search/${encodeURIComponent(query)}`;
-    
     const response = await fetch(url);
     if (!response.ok) {
         throw new Error(`API search failed with status: ${response.status}`);
@@ -33,23 +31,20 @@ export async function fetchSearchData(query) {
  * @param {string} [day] - Optional day (e.g., 'monday').
  * @returns {Promise<object>} - Fetched JSON data.
  */
-export async function fetchScheduleData(day = null) {
+export async function fetchScheduleData(day = 'all', page = 1) {
   try {
-    // Perubahan: Menggunakan API_BASE_URL utama
-    let url = `${API_BASE_URL}/schedule`;
-    if (day) {
-        url += `?scheduled_day=${day}`;
-    }
-
+    const params = new URLSearchParams();
+    if (day) params.append("scheduled_day", day);
+    if (page) params.append("page", page.toString());
+    const url = `${API_BASE_URL}/schedule?${params.toString()}`;
     const response = await fetch(url);
     if (!response.ok) {
         throw new Error(`API schedule failed with status: ${response.status}`);
     }
-    const data = await response.json();
-    return data; 
+    return await response.json(); 
   } catch (error) {
     console.error("Error fetching schedule data:", error);
-    return { data: [] };
+    return { results: [], pagination: {} };
   }
 }
 
@@ -94,7 +89,6 @@ export async function fetchData(endpoint, page = null) {
  */
 export async function fetchAnimeData(id, slug) {
   try {
-    // Perubahan: Format URL menjadi /anime/id/slug
     const url = `${API_BASE_URL}/anime/${id}/${slug}`;
     
     const response = await fetch(url);
@@ -116,9 +110,7 @@ export async function fetchAnimeData(id, slug) {
  */
 export async function fetchWatchData(id, slug, episode) {
   try {
-    // Perubahan: Format URL menjadi /watch/id/slug/episode
     const url = `${API_BASE_URL}/watch/${id}/${slug}/${episode}`;
-    
     const response = await fetch(url);
     if (!response.ok) throw new Error("Video not found");
     return await response.json();
