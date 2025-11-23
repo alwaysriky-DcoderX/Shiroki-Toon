@@ -1,3 +1,6 @@
+/**
+ * @module InfiniteScroll
+ */
 import { fetchData } from "../utils/api.js";
 
 export let observer = null;
@@ -15,7 +18,6 @@ export function initInfiniteScroll(endpoint) {
   const template = document.getElementById("card-template");
 
   if (!content || !skeletons.length || !template) {
-    console.error("Infinite scroll init failed: Element missing");
     return;
   }
 
@@ -33,7 +35,7 @@ export function initInfiniteScroll(endpoint) {
     const card = cardFragment.querySelector(".card");
 
     const img = card.querySelector("img");
-    img.src = item.image || item.poster || "placeholder.jpg";
+    img.src = item.poster || item.image || "placeholder.jpg";
     img.alt = item.title || "No Title";
 
     const titleElem = card.querySelector("h3");
@@ -42,14 +44,16 @@ export function initInfiniteScroll(endpoint) {
     const episode = item.episode
       ? `?episode=${item.episode.split(" ")[1]?.split("/")[0]}`
       : "";
+    
     const linkTo = item.link
       ? item.link
       : `/watch/${item.id}/${item.slug}${episode}`;
+      
     const link = card.querySelector("a");
     link.href = linkTo;
 
     const infoElem = card.querySelector("p");
-    infoElem.textContent = item.episode || item.type || item.status || "";
+    infoElem.textContent = item.episode || item.type || item.status || (item.score ? `★ ${item.score}` : "");
 
     return card;
   }
@@ -73,16 +77,18 @@ export function initInfiniteScroll(endpoint) {
       if (observer) {
         observer.disconnect();
       }
+      
       const noMoreDataCard = createCard({
-        image:
-          "https://avatars.githubusercontent.com/u/179804695?v=4",
-        title: "Sankan!me",
-        link: "https://sankanime.com",
-        episode: "Sankanime.com",
-        type: "",
-        status: "",
+        poster: "https://via.placeholder.com/240x340?text=Habis",
+        title: "Sudah Habis",
+        link: "#",
+        episode: "",
+        type: "End",
+        status: "End",
       });
-      content.replaceChild(noMoreDataCard, loadingIndicator);
+      if(loadingIndicator.parentNode) {
+          loadingIndicator.parentNode.replaceChild(noMoreDataCard, loadingIndicator);
+      }
     }
     isLoading = false;
   }
