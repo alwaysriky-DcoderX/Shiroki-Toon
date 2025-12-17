@@ -5,36 +5,227 @@ import Layout from "~/layouts/Layout.astro";
 import Table from "~/components/ui/Table.astro";
 import { fetchAnimeData, fetchWatchData } from "~/utils/api";
 
+// ================= PARAMS =================
 const { id, slug } = Astro.params;
-const episode = Astro.url.searchParams.get("episode");
+const episodeParam = Astro.url.searchParams.get("episode");
 
+// ================= VALIDATION =================
 if (!id || !slug) return Astro.redirect("/404");
 
+// ================= FETCH ANIME =================
 const res = await fetchAnimeData(id, slug);
 if (!res) return Astro.redirect("/404");
 
 const data = res;
 
+// ================= EPISODE LOGIC =================
 const episodes = data.results.episode || [];
+const totalEp = episodes.at(-1) ?? 1;
+
+const isFinished =
+  data.results.details?.[2]?.data?.includes("Selesai");
+
+const currentEpisodeNumber = episodeParam
+  ? parseInt(episodeParam)
+  : isFinished && episodes.length > 0
+    ? episodes[0]
+    : totalEp;
+
+// ================= CONTENT TYPE =================
+let contentType = "Tidak Diketahui";
+const countryDetail = data.results.details?.find(d => d.type === "Negara:");
+if (countryDetail?.data) {
+  const c = countryDetail.data.toLowerCase();
+  if (c.includes("jp") || c.includes("jepang")) contentType = "Anime";
+  else if (c.includes("cn") || c.includes("china")) contentType = "Donghua";
+  else if (c.includes("kr") || c.includes("korea")) contentType = "Manhwa (Animasi Korea)";
+  else contentType = "Animasi Lain";
+}
+
+// ================= DOWNLOAD LINKS =================
+let downloadLinks = [];
+try {
+  const watchData = await fetchWatchData(id, slug, currentEpisodeNumber);
+  downloadLinks = watchData?.downloads || [];
+} catch (e) {
+  console.error("Gagal fetch watch data:", e);
+}
+---
 
 <link rel="stylesheet" href="https://cdn.vidstack.io/player/theme.css" />
 <link rel="stylesheet" href="https://cdn.vidstack.io/player/video.css" />
 
-<Layout title={data.results.title} description={data.results.description}>
-  <h1>{data.results.title}</h1>
+<Layout title={data.results.title} description={data.results.description || data.results.title}>
+  <div class="container mx-auto px-2 py-4 md:py-8 space-y-6">
 
-  <select>
-    {episodes.map(ep => (
-      <option value={ep} selected={ep === currentEpisodeNumber}>
-        Episode {ep}
-      </option>
-    ))}
-  </select>
-</Layout>  <div class="container mx-auto px-0 py-4 sm:px-4 md:py-8">
-    <div class="flex flex-col gap-6">
+    <!-- PLAYER -->
+    <div class="bg-base-300 rounded-lg shadow-xl p-2 md:p-4">
+      <p
+        id="playerInfo"
+        class="aspect-video skeleton flex flex-col items-center justify-center text-center text-base-content/80"
+      >
+        Memuat video player...
+        <span class="loading loading-spinner loading-md mt-3"></span>
+      </p>
 
-      <div class="bg-base-300 rounded-lg shadow-xl overflow-hidden px-0 py-2 sm:p-2 md:p-4">
-        <p
+      <div
+        id="player"
+        data-poster={data.results.image}
+        data-autoplay="true"
+        data-playsinline
+        class="aspect-video hidden rounded-md"
+      ></div>
+
+      <input id="episode" type="hidden" value={currentEpisodeNumber} />
+
+      <div class="flex justify-between items-center mt-4 p-2 bg-base-200 rounded-lg">
+        <button id="prevEpisode" class="btn btn-sm btn-outline btn-primary">Prev</button>
+        <span class="text-sm md:text-base">Episode {currentEpisodeNumber}</span>
+        <button id="nextEpisode" class="btn btn-sm btn-outline btn-primary">Next</button>
+      </div>
+
+      <!-- EPISODE SELECT -->
+      <div class="mt-4 bg-base-200 rounded-lg p-3">
+        <h3 class="font-bold mb-2">Daftar Episode</h3>
+        <select
+          id="episodeListSelect"
+          class="select select-bordered w-full bg-base-100"
+        >
+          {episodes.length > 0 ? (
+            episodes.map(ep => (
+              <option value={ep} selected={ep === currentEpisodeNumber}>
+                Episode {ep}
+              </option>
+            ))
+          ) : (
+            <option disabled>Tidak ada episode</option>
+          )}
+        </select>
+      </div>
+    </div>
+
+    <!-- INFO -->
+    <div class="bg-base-300 rounded-lg shadow-xl p-4 md:p-6">
+      <h1 class="text-2xl md:text-3xl text-primary mb-4">
+        {data.results.title}
+      </h1>
+
+      <div class="grid md:grid-cols-2 gap-4 mb-6">
+        {data.results.image && (
+          <img
+            src={data.results.image}
+            alt={data.results.title}
+            class="rounded-lg shadow max-h-64 mx-auto"
+          />
+        )}
+
+        <Table data={data.results.details} />
+      </div>
+
+      <h2 class="font-bold text-lg mb-1">Sinopsis</h2>
+      <p set:html={data.results.description || "Sinopsis tidak tersedia."} />
+
+      <p class="text-sm mt-2">
+        Kategori: <b>{contentType}</b>
+      </p>
+
+      <div class="divider"></div>
+
+      <!-- DOWNLOAD -->
+      <h2 class="font-bold text-lg mb-3">
+        Download Episode {currentEpisodeNumber}
+      </h2>
+
+      {downloadLinks.length > 0 ? (
+        <div class="space-y-3">
+          {downloadLinks.map((group, i) => (
+            <div class="collapse collapse-arrow bg-base-200">
+              <input type="radio" name="download" checked={i === 0} />
+              <div class="collapse-title font-bold">
+                {group.quality_group}
+              </div>
+              <div class="collapse-content flex flex-wrap gap-2">
+                {group.links.map(link => (
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener"
+                    class={`btn btn-sm ${
+                      link.recommended ? "btn-primary" : "btn-outline"
+                    }`}
+                  >
+                    {link.provider}
+                    {link.recommended && " ★"}
+                  </a>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div class="alert alert-warning">
+          Link download belum tersedia.
+        </div>
+      )}
+    </div>
+
+    <!-- METADATA -->
+    <div
+      id="anime-metadata"
+      class="hidden"
+      data-id={id}
+      data-slug={slug}
+      data-title={data.results.title}
+      data-image={data.results.image}
+      data-episode={currentEpisodeNumber}
+      data-type={contentType}
+    ></div>
+  </div>
+</Layout>
+
+<script>
+  import { initWatchPlayer } from "/src/scripts/watch.js";
+
+  function saveHistory() {
+    const meta = document.getElementById("anime-metadata");
+    if (!meta) return;
+
+    const data = {
+      id: meta.dataset.id,
+      slug: meta.dataset.slug,
+      title: meta.dataset.title,
+      image: meta.dataset.image,
+      episode: meta.dataset.episode,
+      type: meta.dataset.type,
+      time: Date.now(),
+      link: location.pathname + location.search
+    };
+
+    const key = "anime_history";
+    let history = JSON.parse(localStorage.getItem(key) || "[]");
+    history = history.filter(i => i.id !== data.id);
+    history.unshift(data);
+    history = history.slice(0, 50);
+
+    localStorage.setItem(key, JSON.stringify(history));
+  }
+
+  document.addEventListener("astro:after-swap", () => {
+    initWatchPlayer();
+    saveHistory();
+  });
+
+  initWatchPlayer();
+  saveHistory();
+
+  const select = document.getElementById("episodeListSelect");
+  select?.addEventListener("change", e => {
+    const ep = e.target.value;
+    const url = new URL(location.href);
+    url.searchParams.set("episode", ep);
+    location.assign(url.toString());
+  });
+</script>        <p
           id="playerInfo"
           class="aspect-video skeleton flex flex-col items-center justify-center text-center text-base-content/80 text-sm md:text-lg mb-2"
         >
