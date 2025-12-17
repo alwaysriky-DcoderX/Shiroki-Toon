@@ -16,25 +16,6 @@ if (!res) return Astro.redirect("/404");
 const data = res;
 
 const episodes = data.results.episode || [];
-const totalEp = episodes.at(-1) ?? 1;
-
-const isFinished =
-  data.results.details?.[2]?.data?.includes("Selesai");
-
-const currentEpisodeNumber = episode
-  ? parseInt(episode)
-  : isFinished && episodes.length > 0
-    ? episodes[0]
-    : totalEp;
-
-let downloadLinks = [];
-try {
-  const watchData = await fetchWatchData(id, slug, currentEpisodeNumber);
-  downloadLinks = watchData?.downloads || [];
-} catch (e) {
-  console.error(e);
-}
----
 
 <link rel="stylesheet" href="https://cdn.vidstack.io/player/theme.css" />
 <link rel="stylesheet" href="https://cdn.vidstack.io/player/video.css" />
