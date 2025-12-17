@@ -1,5 +1,4 @@
 ---
----
 export const prerender = false;
 
 import Layout from "~/layouts/Layout.astro";
@@ -7,7 +6,7 @@ import Table from "~/components/ui/Table.astro";
 import { fetchAnimeData, fetchWatchData } from "~/utils/api";
 
 const { id, slug } = Astro.params;
-const episode = Astro.url.searchParams.get("episode") ?? null;
+const episode = Astro.url.searchParams.get("episode");
 
 if (!id || !slug) return Astro.redirect("/404");
 
@@ -189,19 +188,11 @@ try {
 <script>
   import { initWatchPlayer } from "/src/scripts/watch.js";
 
-  function saveHistory() {
-    const meta = document.getElementById("anime-metadata");
-    if (!meta) return;
-    localStorage.setItem("last_watch", meta.dataset.title);
-  }
-
   document.addEventListener("astro:after-swap", () => {
     initWatchPlayer();
-    saveHistory();
   });
 
   initWatchPlayer();
-  saveHistory();
 </script>
 const episodes = data.results.episode || [];
 const totalEp = episodes?.at(-1) ?? 1;
