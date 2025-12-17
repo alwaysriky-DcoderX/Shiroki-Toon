@@ -1,24 +1,28 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 import tailwindcss from "@tailwindcss/vite";
-import vercel from "@astrojs/vercel";
+// import cloudflare from "@astrojs/cloudflare";
+import vercel from '@astrojs/vercel'; // atau /static jika statis
+
 import playformCompress from "@playform/compress";
 
+// https://astro.build/config
 export default defineConfig({
-  output: "server",
-
-  adapter: vercel({
-    // WAJIB untuk SSR dynamic routes
-    webAnalytics: false,
-    speedInsights: false,
-  }),
-
   vite: {
     plugins: [tailwindcss()],
     build: {
-      minify: false, // boleh true kalau mau
+      minify: false,
     },
   },
 
+  output: "server",
+  adapter: vercel(),
+/*
+  adapter: cloudflare({
+    platformProxy: {
+      enabled: false,
+    },
+  }),
+*/
   integrations: [playformCompress()],
 });
