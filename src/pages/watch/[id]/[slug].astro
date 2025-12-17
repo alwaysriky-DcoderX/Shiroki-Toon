@@ -1,5 +1,7 @@
 ---
+---
 export const prerender = false;
+
 import Layout from "~/layouts/Layout.astro";
 import Table from "~/components/ui/Table.astro";
 import { fetchAnimeData, fetchWatchData } from "~/utils/api";
@@ -7,55 +9,48 @@ import { fetchAnimeData, fetchWatchData } from "~/utils/api";
 const { id, slug } = Astro.params;
 const episode = Astro.url.searchParams.get("episode") ?? null;
 
-if (!id || !slug) {
-  return Astro.redirect("/404");
-}
+if (!id || !slug) return Astro.redirect("/404");
 
 const res = await fetchAnimeData(id, slug);
-if (!res) {
-  return Astro.redirect("/404");
-}
+if (!res) return Astro.redirect("/404");
+
 const data = res;
 
-let contentType = "Tidak Diketahui";
-const countryDetail = data.results.details?.find(d => {
-    return d.type === "Negara:";
-});
-
-if (countryDetail && countryDetail.data) {
-    const country = countryDetail.data.toLowerCase();
-    if (country.includes("jp") || country.includes("jepang")) {
-        contentType = "Anime";
-    } else if (country.includes("cn") || country.includes("china")) {
-        contentType = "Donghua";
-    } else if (country.includes("kr") || country.includes("korea")) {
-        contentType = "Manhwa (Animasi Korea)";
-    } else {
-        contentType = "Animasi Lain";
-    }
-}
-
 const episodes = data.results.episode || [];
-const totalEp = episodes?.at(-1) ?? 1;
-const isFinished = data.results.details && data.results.details[2]?.data?.includes("Selesai");
+const totalEp = episodes.at(-1) ?? 1;
 
-const currentEpisodeNumber = episode ?
-    parseInt(episode) : (isFinished && episodes.length > 0 ? episodes[0] : totalEp);
+const isFinished =
+  data.results.details?.[2]?.data?.includes("Selesai");
+
+const currentEpisodeNumber = episode
+  ? parseInt(episode)
+  : isFinished && episodes.length > 0
+    ? episodes[0]
+    : totalEp;
 
 let downloadLinks = [];
 try {
-    const watchData = await fetchWatchData(id, slug, currentEpisodeNumber);
-    downloadLinks = watchData?.downloads || [];
-} catch (error) {
-    console.error("Gagal mengambil link download:", error);
+  const watchData = await fetchWatchData(id, slug, currentEpisodeNumber);
+  downloadLinks = watchData?.downloads || [];
+} catch (e) {
+  console.error(e);
 }
 ---
 
 <link rel="stylesheet" href="https://cdn.vidstack.io/player/theme.css" />
 <link rel="stylesheet" href="https://cdn.vidstack.io/player/video.css" />
 
-<Layout title={data.results.title} description={data.results.description || data.results.title}>
-  <div class="container mx-auto px-0 py-4 sm:px-4 md:py-8">
+<Layout title={data.results.title} description={data.results.description}>
+  <h1>{data.results.title}</h1>
+
+  <select>
+    {episodes.map(ep => (
+      <option value={ep} selected={ep === currentEpisodeNumber}>
+        Episode {ep}
+      </option>
+    ))}
+  </select>
+</Layout>  <div class="container mx-auto px-0 py-4 sm:px-4 md:py-8">
     <div class="flex flex-col gap-6">
 
       <div class="bg-base-300 rounded-lg shadow-xl overflow-hidden px-0 py-2 sm:p-2 md:p-4">
